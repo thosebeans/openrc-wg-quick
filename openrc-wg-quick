@@ -1,1 +1,65 @@
 #!/usr/bin/env sh
+
+#############
+# functions #
+#############
+
+println () {
+    printf '%s\n' "$1"
+}
+
+errorln () {
+    println "$1" >&2
+}
+
+#############
+# constants #
+#############
+
+help='openrc-wg-quick - create openrc services for wg-quick configurations
+
+usage:
+openrc-wg-quick DEVICE
+
+description:
+openrc-wg-quick automatically creates an openrc service for a wg-quick configuration.
+A file /etc/wireguard/DEVICE.conf must exist.
+A service with the name wg-quick@DEVICE will be created.'
+
+########
+# main #
+########
+
+if [ $# -eq 0 ]; then
+    errorln "$help"
+    exit 0
+fi
+
+device="$1"
+confPath="/etc/wireguard/${device}.conf"
+
+if ! [ -f "${confPath}" ]; then
+    errorln "file ${confPath} doesnt exist"
+    exit 1
+fi
+
+svName="wg-quick@${device}"
+
+svFile="/etc/init.d/${svName}"
+
+printf '#!/sbin/openrc-run
+name="%s"
+
+start () {
+    wg-quick up "%s"
+}
+
+stop () {
+    wg-quick down "%s"
+}
+' "$svName" "$device" "$device" > $svFile
+
+chmod +x "$svFile"
+
+println "$svName"
+println "$svFile"
